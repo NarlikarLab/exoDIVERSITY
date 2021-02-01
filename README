@@ -63,7 +63,7 @@ OUTPUT:
 	   For i in {0,..<m>}
 	   a) logo_<i>.png and logo_<i>_rc.png are the motifs and their reverse complement forms
 	   b) reads_<i>.png are the positive and negative strand read profiles for each motif
-	   c) info.txt: This file contains information about the mode, the motif start position in the sequence, the positions                   of the positive and negative strand read windows and the strand for each sequence
+	   c) info.txt: This file contains information about the mode, the motif start position in the sequence, the positions of the positive and negative strand read windows and the strand for each sequence
 	   d) events.bed: It contains the motif regions in each sequence in the sorted order of the modes
 	   e) bestModelParams.txt: It contains all the parameter values for the best model learned
 	3) A "settings.txt" file containing all the values of the parameters used for the run
