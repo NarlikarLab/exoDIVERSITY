@@ -24,8 +24,8 @@ INSTALLATION:
 exoDIVERSITY is available at: 
 
 To install exoDIVERSITY execute the following commands:
-wget https://github.com/NarlikarLab/exoDIVERSITY/archive/exodiversity.tar.gz
-tar -xvf exodiversity.tar.gz
+wget https://github.com/NarlikarLab/exoDIVERSITY/archive/exoDIVERSITY.tar.gz
+tar -xvf exoDIVERSITY.tar.gz
 cd exoDIVERSITY
 make
 
