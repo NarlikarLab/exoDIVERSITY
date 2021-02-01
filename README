@@ -1,0 +1,75 @@
+exoDIVERISTY is a tool that can be used to resolve diverse protein-DNA footprints from exonuclease based ChIP experiments such as ChIP-exo or ChIP-nexus
+
+The core engine is written in C with a python wrapper for the parallel processing and plotting. It also uses R to plot the final heatmap images.
+The following packages need to be installed for running exoDIVERSITY: 
+ * Python 2.7+ (Not compatible with Python 3.x)
+ * python-numpy
+ * python-ctypes
+ * python-re
+ * python-matplotlib
+ * R >= 3.3
+ * R packages: RColorBrewer and plotfunctions
+
+Extra tools needed:
+ * bedtools v2.25.0
+ * twoBitToFa: UCSC tool to extract fasta sequences from .2bit file
+   => Linux 64 bit version: http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/
+   => macOS version: http://hgdownload.cse.ucsc.edu/admin/exe/macOSX.x86_64/
+
+Extra files needed:
+ * .2bit file for the respective genome assembly
+
+INSTALLATION:
+
+exoDIVERSITY is available at: 
+
+To install exoDIVERSITY execute the following commands:
+wget https://github.com/NarlikarLab/exoDIVERSITY/archive/exodiversity.tar.gz
+tar -xvf exodiversity.tar.gz
+cd exoDIVERSITY
+make
+
+To execute exoDIVERSITY from anywhere export the path to exoDIVERSITY to the PATH variable.
+USAGE: exoDiveristy [options]
+	 -f: Input fasta file
+	 -r: Reads file either in BAM (sorted) or bedGraph format
+	 -format: Format of the reads file BAM or BED
+	 -g: genome file containing sizes of call chromosomes
+	 -ctrl: Control reads file in the same format as the reads file
+	 -o: Output directory (must be new)
+	 -rev: is 1 if reverse complement is to be considered; otherwise 0. Default 1
+	 -mask: is 1 if repeats are to be masked; otherwise 0. Default 0
+	 -initialWidth: The width of the motifs at starting point
+	 -minMode: Minimum number of modes in which data should be divided. Default 1
+	 -maxMode: Maximum number of modes in which the data should be divided. Default 10
+	 -rWidth: The width of the read windows for both positive and negative strand. Default 5
+	 -nproc: The number of processors to be used for computation. Default is the number of cores the system has
+	 -bin: Binarize read counts based on median, first quartile or third quartile or keep when file is already in binary form {median,Q1,Q3,keep}. Default median
+	 -ntrials: Number of trials for each model. Default 5
+	 -pcZeros: Pseudo count for 0s in reads data. Default 0.9
+	 -pcOnes: Pseudo count for 1s in reads data. Default 0.1
+	 -twobit: 2bit file (from UCSC browser) for sequence alignment plots
+In case sequence wise + and - ve read counts are present
+	 -p: The positive strand reads file
+	 -n: The negative strand reads file
+
+
+OUTPUT:
+	The output of exoDIVERSITY contains the following components:
+	1) A "reads" directory containing the read counts for each sequence for both the positive and negative strands.
+	   It also contains the final binarized read counts files for both the strands.
+	2) For each mode <m> (from -minMode to -maxMode) a directory containing the model with <m> modes
+	   In a directory <m>modes there are the following files:
+	   For i in {0,..<m>}
+	   a) logo_<i>.png and logo_<i>_rc.png are the motifs and their reverse complement forms
+	   b) reads_<i>.png are the positive and negative strand read profiles for each motif
+	   c) info.txt: This file contains information about the mode, the motif start position in the sequence, the positions                   of the positive and negative strand read windows and the strand for each sequence
+	   d) events.bed: It contains the motif regions in each sequence in the sorted order of the modes
+	   e) bestModelParams.txt: It contains all the parameter values for the best model learned
+	3) A "settings.txt" file containing all the values of the parameters used for the run
+	4) "exoDiversity.html" contains the output for the best model identified by exoDiversity. 
+
+EXAMPLE:
+	An example fasta file along with a small BAM file for the experimental reads and control reads are given in the EXAMPLE directory. One can run exoDIVERISTY as follows to get a similar output as given in the Example/out directory.
+
+./exoDiversity -f Example4/combined_FoxA1_CTCF.fasta -r Example4/combined_small.bam -ctrl Example4/combined_control_small.bam -o Example4/out -twobit /data/genomeData/hg19/hg19.2bit -format BAM

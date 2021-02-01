@@ -1,0 +1,10 @@
+from ctypes import *
+
+# create ctypes for C data structures dataSet and trainOut
+
+class DataSet(Structure):
+    _fields_ = [("data",POINTER(POINTER(c_int))),("features",POINTER(c_int)),("posreads",POINTER(POINTER(c_double))),("negreads",POINTER(POINTER(c_double))),("lookahead",POINTER(POINTER(c_int))),("featureValues",c_int),("n",c_int)]
+
+class TrainOut(Structure):
+    _fields_ = [("labels",POINTER(c_int)),("startPos",POINTER(c_int)),("preadsStart",POINTER(c_int)),("nreadsStart",POINTER(c_int)),
+                ("motifWidth",POINTER(c_int)),("preadsWidth",POINTER(c_int)),("nreadsWidth",POINTER(c_int)),("likelihood",c_double)]
