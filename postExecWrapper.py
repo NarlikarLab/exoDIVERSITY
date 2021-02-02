@@ -1,8 +1,6 @@
 ### To copy the files from the run with highest likelihood in the parent directory
 
 ### To find the best model and create a link
-### To create the data.js file in the outdir
-### To copy the all_models.html file in the topmost directory for easier viewing
 
 import sys
 import os
@@ -19,6 +17,7 @@ def chooseBestTrial(outdir,minMode,maxMode,noOfmodels):
             continue
         maxpost = -9999999999
         bestrun = 0
+        lenOflabels = -1
         for j in range(1,noOfmodels+1):
             bestmodelfile = outdir+'/'+str(i)+'modes/run'+str(j)+'/bestModel.out' 
             if (not(os.path.isfile(bestmodelfile))):
@@ -28,8 +27,11 @@ def chooseBestTrial(outdir,minMode,maxMode,noOfmodels):
             post = float (l.strip().split(' ')[1])
             labels = best.readline()
             labels = set(best.readline().strip().split('\t'))
-            
-            if len(labels) != i:
+            if '-1' in labels:
+                lenOflabels = len(labels)-1
+            else:
+                lenOflabels = len(labels)
+            if lenOflabels != i:
                 continue
             if post > maxpost:
                 maxpost = post
