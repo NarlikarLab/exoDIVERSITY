@@ -71,7 +71,12 @@ def getBestModelBIC(outdir,minMode,maxMode,noOfmodels,maxpostdetails):
         labels = f.readline()
         labels = map(int,f.readline().strip().split('\t'))
         noOfSeqs = len(labels)
-        modes = collections.Counter(labels)
+        modes = {}
+        for l1 in labels:
+            if l1 in modes:
+                modes[l1]+=1
+            else:
+                modes[l1]=1
         noOfmodes = len(modes.keys())
         modesPrior = 1
         modespostterm = sum([modes[i]*(math.log(modes[i]+modesPrior)-math.log(noOfSeqs + modesPrior*noOfmodes)) for i in modes.keys()])

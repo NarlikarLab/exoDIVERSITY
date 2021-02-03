@@ -8,7 +8,7 @@ class DataSet(Structure):
 class TrainOut(Structure):
     _fields_ = [("labels",POINTER(c_int)),("startPos",POINTER(c_int)),("preadsStart",POINTER(c_int)),("nreadsStart",POINTER(c_int)),
                 ("motifWidth",POINTER(c_int)),("preadsWidth",POINTER(c_int)),("nreadsWidth",POINTER(c_int)),("likelihood",c_double)]
-datalib = cdll.LoadLibrary("/home/anushua/ReadsAndMotifs/scripts/binary-version/withReads/finalVersion1/dataStructures.so")
+datalib = cdll.LoadLibrary("/home/anushua/ReadsAndMotifs/scripts/binary-version/withReads/exoDiv_trials/exoDIVERSITY/dataStructures.so")
 def getCvar(l,datatype):
     n = len(l)
     #arr = (datatype*n)(*l)

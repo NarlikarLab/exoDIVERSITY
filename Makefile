@@ -9,6 +9,8 @@ LFLAGS=-lm
 .PHONY: all
 
 all: exoDiversity 
+	@chmod +X preRunChecks.sh
+	@sh preRunChecks.sh
 
 exoDiversity: motifAndReadsFunctions.o modelfunctions.o bestModelFunctions.o traindata.o
 	$(CC) $(CFLAGS) -o dataStructures.so messages.c motifAndReadsFunctions.c modelfunctions.c bestModelFunctions.c traindata.c  $(LFLAGS)

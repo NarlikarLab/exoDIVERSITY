@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+	<body>
+		<div style"margin:10px">
+			<h3> Output for best model with 2 modes</h3>
+		</div>
+		<div class="row">
+			<div class="column">
+				<figure>
+				<figcaption>Sequence alignments</figcaption>
+				<img src="2modes/alignedMotifs.png" alt="dna" style="width: 90%">
+				</figure>
+			</div>
+			<div class="column">
+				<figure>
+				<figcaption>Positive strand reads</figcaption>
+				<img src="2modes/posreadsHeatmap.png" alt="posreads" style="width: 90%">
+				</figure>
+			</div>
+			<div class="column">
+				<figure>
+				<figcaption>Negative strand reads</figcaption>
+				<img src="2modes/negreadsHeatmap.png" alt="negreads" style="width: 90%">
+				</figure>
+			</div>
+		</div>
+		<div style="clear: both;">
+			<p>For details about the sequences and the modes please refer to <a href="2modes/info.txt">info.txt</a></p>
+			<p>The output for other models can be viewed from <a href="links.html">Other models</a></p>
+			<h3>Motif logos and read profiles:</h3>
+		</div>
+		<div style="margin: 10px">
+			<table style="width: 100%">
+				<tr>
+					<th>Motif</th>
+					<th>Motif reverse complement</th>
+					<th>Reads</th>
+				</tr>
+				<tr>
+					<td><img src="2modes/logo_0.png" width="270.0"px height="119.25"px></td>
+					<td><img src="2modes/logo_0_rc.png" width="270.0"px height="119.25"px></td>
+					<td><img src="2modes/reads_0.png" width="400"px height="300"px></td>
+				</tr>
+				<tr>
+					<td><img src="2modes/logo_1.png" width="206.25"px height="119.25"px></td>
+					<td><img src="2modes/logo_1_rc.png" width="206.25"px height="119.25"px></td>
+					<td><img src="2modes/reads_1.png" width="400"px height="300"px></td>
+				</tr>
+			</table>
+		</div>
+		<style type="text/css">
+		.column {
+			float: left;
+			width: 25%;
+			padding: 1px;
+			text-align: center;
+		}
+		.row::after{
+			content: "";
+			clear: both;
+			display: inline-block;
+		}
+		figcaption{
+			font-weight: bold;
+			text-align:center;
+		}
+		td{ 
+			text-align: center;
+		}
+		</style>
+	</body>
+</html>
