@@ -72,4 +72,4 @@ OUTPUT:
 EXAMPLE:
 	An example fasta file along with a small BAM file for the experimental reads and control reads are given in the EXAMPLE directory. One can run exoDIVERISTY as follows to get a similar output as given in the Example/out directory.
 
-./exoDiversity -f Example4/combined_FoxA1_CTCF.fasta -r Example4/combined_small.bam -ctrl Example4/combined_control_small.bam -o Example4/out -twobit /data/genomeData/hg19/hg19.2bit -format BAM
+./exoDiversity -f Example/combined_FoxA1_CTCF.fasta -r Example/combined_small.bam -ctrl Example/combined_control_small.bam -o Example/out -twobit /data/genomeData/hg19/hg19.2bit -format BAM
