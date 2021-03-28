@@ -43,7 +43,9 @@ USAGE: exoDiveristy [options]
 	 -minMode: Minimum number of modes in which data should be divided. Default 1
 	 -maxMode: Maximum number of modes in which the data should be divided. Default 10
 	 -rWidth: The width of the read windows for both positive and negative strand. Default 5
+	 -gobeyond: 0 or 1. 1 allows the read windows to go beyond the motif on both strands. Default 0
 	 -nproc: The number of processors to be used for computation. Default is the number of cores the system has
+	 -v: 0 or 1. 1 to save plots for the posterior scores. Default 0
 	 -bin: Binarize read counts based on median, first quartile or third quartile or keep when file is already in binary form {median,Q1,Q3,keep}. Default median
 	 -ntrials: Number of trials for each model. Default 5
 	 -pcZeros: Pseudo count for 0s in reads data. Default 0.9
@@ -66,9 +68,10 @@ OUTPUT:
 	   c) info.txt: This file contains information about the mode, the motif start position in the sequence, the positions                   of the positive and negative strand read windows and the strand for each sequence
 	   d) events.bed: It contains the motif regions in each sequence in the sorted order of the modes
 	   e) bestModelParams.txt: It contains all the parameter values for the best model learned
+	   f) seqsInProbSpace.png: It is a plot containing the probability of a sequence belonging to each of the modes in the model for all the sequences.
 	3) A "settings.txt" file containing all the values of the parameters used for the run
 	4) "exoDiversity.html" contains the output for the best model identified by exoDiversity. 
-
+	
 EXAMPLE:
 	An example fasta file along with a small BAM file for the experimental reads and control reads are given in the EXAMPLE directory. One can run exoDIVERISTY as follows to get a similar output as given in the Example/out directory.
 
