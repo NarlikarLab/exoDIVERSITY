@@ -48,8 +48,8 @@ USAGE: exoDiveristy [options]
 	 -v: 0 or 1. 1 to save plots for the posterior scores. Default 0
 	 -bin: Binarize read counts based on median, first quartile or third quartile or keep when file is already in binary form {median,Q1,Q3,keep}. Default median
 	 -ntrials: Number of trials for each model. Default 5
-	 -pcZeros: Pseudo count for 0s in reads data. Default 0.9
-	 -pcOnes: Pseudo count for 1s in reads data. Default 0.1
+	 -pcZeros: Pseudo count for 0s in reads data. Default 1
+	 -pcOnes: Pseudo count for 1s in reads data. Default 1
 	 -twobit: 2bit file (from UCSC browser) for sequence alignment plots
 In case sequence wise + and - ve read counts are present
 	 -p: The positive strand reads file
