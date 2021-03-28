@@ -10,8 +10,8 @@ def printHelp():
     print 'exoDiversity [options]'
     print '\t -f: Input fasta file'
     print '\t -r: Reads file either in BAM (sorted) or bedGraph format'
-    print '\t -format: Format of the reads file BAM or BED. BED format file must have strand information as 6th column'
-    print '\t -g: genome file containing sizes of call chromosomes'
+    print '\t -format: Format of the reads file BAM or BED'
+    print '\t -g: genome file containing sizes of all chromosomes (Required when -format is BED)xs'
     print '\t -ctrl: Control reads file in the same format as the reads file'
     print '\t -o: Output directory'
     print '\t -rev: is 1 if reverse complement is to be considered; otherwise 0. Default 1'
@@ -20,9 +20,11 @@ def printHelp():
     print '\t -minMode: Minimum number of modes in which data should be divided. Default 1'
     print '\t -maxMode: Maximum number of modes in which the data should be divided. Default 10'
     print '\t -rWidth: The width of the read windows for both positive and negative strand. Default 5'
+    print '\t -gobeyond: 0 or 1. 1 allows the read windows to go beyond the motif on both strands. Default 0'
     print '\t -nproc: The number of processors to be used for computation. Default is the number of cores the system has'
+    print '\t -v: 0 or 1. 1 to save plots for the posterior scores. Default 0'
     print '\t -bin: Binarize read counts based on median, first quartile or third quartile or keep when file is already in binary form {median,Q1,Q3,keep}. Default median'
-    print '\t -ntrials: Number of trials for each model. Default 10'
+    print '\t -ntrials: Number of trials for each model. Default 5'
     print '\t -pcZeros: Pseudo count for 0s in reads data. Default 1'
     print '\t -pcOnes: Pseudo count for 1s in reads data. Default 1'
     print '\t -twobit: 2bit file (from UCSC browser) for sequence alignment plots'
@@ -112,9 +114,9 @@ def fetchParameters(options):
         printHelp()
         exit()
 
-    d = {'-f':'','-r':'','-format':'','-g':'','-ctrl':'','-p':'','-n':'','-twobit':'','-rev':defaultRevFlag,'-o':'','-mask':defaultMaskFlag,'-initialWidth':defaultInitialWidth,'-minMode':defaultminMode,'-maxMode':defaultmaxMode,'-rWidth':defaultReadWidth,'-nproc':defaultNProc,'-bin':defaultBinarizingParam, '-ntrials':defaultnoOfModels, '-pcZeros':defaultPseudocountZeros, '-pcOnes':defaultPseudocountOnes,'-seed':defaultSeed}
+    d = {'-f':'','-r':'','-format':'','-g':'','-ctrl':'','-p':'','-n':'','-twobit':'','-v':defaultPostFlag,'-rev':defaultRevFlag,'-o':'','-mask':defaultMaskFlag,'-gobeyond':defaultReadwinBorderFlag,'-initialWidth':defaultInitialWidth,'-minMode':defaultminMode,'-maxMode':defaultmaxMode,'-rWidth':defaultReadWidth,'-nproc':defaultNProc,'-bin':defaultBinarizingParam, '-ntrials':defaultnoOfModels, '-pcZeros':defaultPseudocountZeros, '-pcOnes':defaultPseudocountOnes,'-seed':defaultSeed}
     validOptions = d.keys()
-    dF = {'-f':checkValidFile,'-twobit':checkValidFile,'-r':checkValidFile,'-g':checkValidFile,'-ctrl':checkValidFile,'-p':checkValidFile,'-n':checkValidFile,'-o':getOutdir,'-format':checkFormat,'-rev':getFlag,'-mask':getFlag,'-initialWidth':getValidPosNum,'-rWidth':getValidPosNum,'-minMode':getValidPosNum,'-maxMode':getValidPosNum,'-nproc':getValidPosNum,'-bin':getValidBinarizingParam,'-ntrials':getValidPosNum, '-pcZeros':getValidRealNum, '-pcOnes':getValidRealNum,'-seed':getValidPosNum}
+    dF = {'-f':checkValidFile,'-twobit':checkValidFile,'-r':checkValidFile,'-g':checkValidFile,'-ctrl':checkValidFile,'-p':checkValidFile,'-n':checkValidFile,'-o':getOutdir,'-format':checkFormat,'-rev':getFlag,'-mask':getFlag,'-v':getFlag,'-gobeyond':getFlag,'-initialWidth':getValidPosNum,'-rWidth':getValidPosNum,'-minMode':getValidPosNum,'-maxMode':getValidPosNum,'-nproc':getValidPosNum,'-bin':getValidBinarizingParam,'-ntrials':getValidPosNum, '-pcZeros':getValidRealNum, '-pcOnes':getValidRealNum,'-seed':getValidPosNum}
     for i in range(len(options)):
         if (i%2 == 0):
             if (options[i] not in validOptions):
@@ -318,7 +320,10 @@ def storeSettings(paramVals):
         of.write('Reads file: '+paramVals['-r']+'\n')
     if paramVals['-ctrl']!='':
         of.write('Control reads file: '+paramVals['-ctrl']+'\n')
-    of.write('Format of reads file: '+paramVals['-format'])
+    if paramVals['-format']!='':
+        of.write('Format of reads file: '+paramVals['-format']+'\n')
+    if paramVals['-twobit']!='':
+        of.write('twobit file: '+paramVals['-twobit'])
     of.write('Positive reads file: '+paramVals['-p']+'\n')
     of.write('Negative reads file:'+paramVals['-n']+'\n')
     of.write('Output directory: '+paramVals['-o']+'\n')

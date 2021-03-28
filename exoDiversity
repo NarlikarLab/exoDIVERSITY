@@ -1,1 +1,1 @@
-python /home/anushua/ReadsAndMotifs/scripts/binary-version/withReads/exoDiv_trials/exoDIVERSITY/mainFunc.py "$@"
+python /home/anushua/ReadsAndMotifs/scripts/binary-version/withReads/exoDiv_trials/exoDiv_finalVersion4/mainFunc.py "$@"

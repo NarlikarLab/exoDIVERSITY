@@ -70,5 +70,5 @@ mid = (mid+yval)/2
 text(x=-5,y=mid,labels=paste(modenames[i],sep=""),cex=0.8,col="black")
 
 par(cex=1)
-gradientLegend(valRange=c(0,q),pos=c(10,-(0.06*totalSeqs),(lenOfSeq-10),-(0.08*totalSeqs)),coords=T,side=1,color=pal,cex.label=1,n.seg=1)
+gradientLegend(valRange=c(0,q),pos=c(10,-(0.04*totalSeqs),(lenOfSeq-10),-(0.048*totalSeqs)),coords=T,side=1,color=pal,cex.label=1,n.seg=1)
 g = dev.off()

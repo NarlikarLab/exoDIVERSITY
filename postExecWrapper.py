@@ -1,6 +1,8 @@
 ### To copy the files from the run with highest likelihood in the parent directory
 
 ### To find the best model and create a link
+### To create the data.js file in the outdir
+### To copy the all_models.html file in the topmost directory for easier viewing
 
 import sys
 import os
@@ -28,9 +30,10 @@ def chooseBestTrial(outdir,minMode,maxMode,noOfmodels):
             labels = best.readline()
             labels = set(best.readline().strip().split('\t'))
             if '-1' in labels:
-                lenOflabels = len(labels)-1
+                lenOflabels=len(labels)-1
             else:
-                lenOflabels = len(labels)
+                lenOflabels=len(labels)
+
             if lenOflabels != i:
                 continue
             if post > maxpost:
@@ -47,7 +50,7 @@ def chooseBestTrial(outdir,minMode,maxMode,noOfmodels):
                    os.system('rm '+ likefile)
         if bestrun == 0:
             print "Check the bestModel files for mode: "+str(i)
-            os.system('rm '+outdir+'/'+str(i)+'modes/*.png '+outdir+'/'+str(i)+'modes/*.txt')
+            #os.system('rm '+outdir+'/'+str(i)+'modes/*.png '+outdir+'/'+str(i)+'modes/*.txt')
             continue
         else:
             os.system("cp "+outdir+'/'+str(i)+'modes/run'+str(bestrun)+'/* ' + outdir+'/'+str(i)+'modes')
@@ -71,12 +74,7 @@ def getBestModelBIC(outdir,minMode,maxMode,noOfmodels,maxpostdetails):
         labels = f.readline()
         labels = map(int,f.readline().strip().split('\t'))
         noOfSeqs = len(labels)
-        modes = {}
-        for l1 in labels:
-            if l1 in modes:
-                modes[l1]+=1
-            else:
-                modes[l1]=1
+        modes = collections.Counter(labels)
         noOfmodes = len(modes.keys())
         modesPrior = 1
         modespostterm = sum([modes[i]*(math.log(modes[i]+modesPrior)-math.log(noOfSeqs + modesPrior*noOfmodes)) for i in modes.keys()])

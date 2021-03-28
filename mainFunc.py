@@ -104,14 +104,17 @@ def callTraindata_parallel(pyvars):
                     modedir = '/'+str(allprocs[started][1])+'modes'
                     outdir = params['-o']+modedir+trial
                     print "Starting mode ",allprocs[started][1]," with seed: ",allprocs[started][0]+params['-seed']-1
-                    likefile = outdir + '/likelihood.txt'
+                    if params['-v'] == 1:
+                        likefile = outdir + '/likelihood.txt'
+                    else:
+                        likefile= ''
                     bestmodelfile = outdir + '/bestModelParams.txt'
                     os.makedirs(outdir)
                     # allprocs[started][0] ===> seed
                     # allprocs[started][1] ===> mode
                     mWidth = motWidths[allprocs[started][1] - params['-minMode']]
                     seed = ctypes.c_int(allprocs[started][0]+params['-seed']-1)
-                    pr = mp.Process(target=startTraining, args=([pyvars[0],pyvars[1],pyvars[2],outdir,params['-twobit'],ctypes.byref(ds),ctypes.c_int(allprocs[started][1]),alpha,pcReads,seed,background,posreadsback,negreadsback,mWidth,ctypes.c_int(rWidth),ctypes.c_int(minWidth),ctypes.c_int(maxWidth),ctypes.c_int(defaultPositiveOffset),ctypes.c_int(defaultNegativeOffset),ctypes.c_int(params['-rev']),likefile,bestmodelfile],))
+                    pr = mp.Process(target=startTraining, args=([pyvars[0],pyvars[1],pyvars[2],outdir,params['-twobit'],ctypes.byref(ds),ctypes.c_int(allprocs[started][1]),alpha,pcReads,seed,background,posreadsback,negreadsback,mWidth,ctypes.c_int(rWidth),ctypes.c_int(minWidth),ctypes.c_int(maxWidth),ctypes.c_int(defaultPositiveOffset),ctypes.c_int(defaultNegativeOffset),ctypes.c_int(params['-rev']),ctypes.c_int(params['-gobeyond']),likefile,bestmodelfile],))
                     p[j]=pr
                     p[j].start()
                     procArr[j]=allprocs[joined][0]
@@ -126,10 +129,25 @@ def callTraindata_parallel(pyvars):
     bestmodel = pw.fetchBestModel(params['-o'],params['-minMode'],params['-maxMode'],params['-ntrials'])
     if(params['-twobit']!=''):
         sv.createRPlots(params['-o'],params['-minMode'],params['-maxMode'],params['-o']+"/reads/posreads", params['-o']+"/reads/negreads",params['-twobit'])
+
+    ##### plot seq scores in prob space
+    alldata = [pyvars[0],pyvars[1],pyvars[2],pyvars[3],pyvars[4],pyvars[5],lookahead]
+    bmfile = params['-o']+'/'+bestmodel+'/bestModelParams.txt'
+    headerfile = params['-o']+'/headers.txt'
+    scoreOutfile = params['-o']+'/'+bestmodel+'/seqScoresPerMode_normalized.txt'
+    sv.seqsInProbSpace(alldata,bmfile,scoreOutfile,params['-rev'],params['-mask'],headerfile,params['-o']+'/'+bestmodel)
+    #####
+
+    ##### save HTML output
     sv.createHTML(params['-o'],params['-minMode'],params['-maxMode'],params['-twobit'],params['-f'],bestmodel)
-    os.system("rm -r "+params['-o']+"/reads/posreads "+params['-o']+"/reads/negreads ")
+    #####
+    
+    ##### delete files
+    if(os.path.isdir(params['-o']+"/reads/posreads") and os.path.isdir(params['-o']+"/reads/negreads")):
+        os.system("rm -r "+params['-o']+"/reads/posreads "+params['-o']+"/reads/negreads ")
     if params['-ctrl']!='':
         os.system("rm -r "+params['-o']+"/reads/control_posreads "+params['-o']+"/reads/control_negreads")
+    #####
     print "All models completed"
 
 def savetxt(outfile,arr):
@@ -159,7 +177,7 @@ def callTraindata(pyvars):
     minWidth = defaultminWidth
     maxWidth = defaultmaxWidth
 
-    for s in range(1,6):
+    for s in range(9,10):
         seed=s
         print 'Seed ',seed
         od = params['-o'] +'/'+str(params['-minMode'])+'modes/run'+str(seed)

@@ -138,17 +138,26 @@ void addRemoveDataPoint(model *m, dataSet *ds, int *labels, int *startPos, int *
   r1=(m->posreadsparams)[mode].readsWin;
   r2=(m->negreadsparams)[mode].readsWin;
   for(i=0;i<(m->mWidth)[mode];i++){
-    if(i+startPos[index] >= (ds->features)[index]) break;
+    if(i+startPos[index] >= (ds->features)[index]) {
+      printf("Cannot add/remove sequence motif\n");
+      exit(0);
+    }
     (m1->modeMotifCount)[(ds->data)[index][startPos[index]+i]] = (m1->modeMotifCount)[(ds->data)[index][startPos[index]+i]] + ar;
     m1=m1->next;
   }
   for(i=0;i<(m->preadsWidth)[mode];i++){
-    if(posreadsStart[index]+i >= (ds->features)[index]) break; 
+    if(posreadsStart[index]+i >= (ds->features)[index]) {
+      printf("Cannot add/remove pos read window\n");
+      exit(0);
+    }
     (r1->modeReadsCount)[(int)(ds->posreads)[index][posreadsStart[index]+i]] = (r1->modeReadsCount)[(int)(ds->posreads)[index][posreadsStart[index]+i]] + ar;
     r1 = r1->next;
   }
   for(i=0;i<(m->nreadsWidth)[mode];i++){
-    if(negreadsStart[index]+i >= (ds->features)[index]) break;
+    if(negreadsStart[index]+i >= (ds->features)[index]){
+      printf("Cannot add/remove neg reads window\n");
+      exit(0);
+    }
     (r2->modeReadsCount)[(int)(ds->negreads)[index][negreadsStart[index]+i]] = (r2->modeReadsCount)[(int)(ds->negreads)[index][negreadsStart[index]+i]] + ar;
     r2 = r2->next;
   }
@@ -349,27 +358,45 @@ void printModel(model *m,int mode){
   printf("Motif Width: %d \t Pos reldist: %d \t Neg reldist: %d\n",(m->mWidth)[mode],(m->readMotifDist)[mode].preadsMotif,(m->readMotifDist)[mode].nreadsMotif);
 }
 
-int sampleStartPosn(model *m, dataSet *ds,int mode, int index, unsigned int *seed, int revFlag, int posRelDist, int negRelDist, double *backgroundi, double *posreadsback, double *negreadsback){
+int sampleStartPosn(model *m, dataSet *ds,int mode, int index, unsigned int *seed, int revFlag, int gobeyond, int posRelDist, int negRelDist, double *backgroundi, double *posreadsback, double *negreadsback){
   double *values,sum;
-  int j,k,L,v,Ls,rhs;
+  int j,k,L,v,Ls,rhs,lhs=0;
   double motval,rval;
-  //int counter=0;
-  if(negRelDist < (m->mWidth)[mode])
-    rhs = (m->mWidth)[mode];
-  else
-    rhs = negRelDist;
-  
+  int gbextraleft=0,gbextraright=0;
+  if (gobeyond){
+    gbextraleft = negRelDist-(m->nreadsWidth)[mode];
+    gbextraright = ((m->preadsWidth)[mode]-posRelDist-(m->mWidth)[mode]-1);
+  }
+  if (gbextraright>0 && gbextraright+(m->mWidth)[mode]>negRelDist){
+    rhs = (m->mWidth)[mode]+gbextraright;
+  }
+  else {
+    if(negRelDist < (m->mWidth)[mode])
+      rhs = (m->mWidth)[mode];
+    else
+      rhs = negRelDist;
+  }
   if(posRelDist <= 0) {
-    values = (double *)malloc(sizeof(double)*((ds->features)[index] - rhs+1));
+    if (gbextraleft<0){
+      values = (double *)malloc(sizeof(double)*((ds->features)[index] - rhs + gbextraleft+1));
+      Ls=(ds->features)[index] - rhs + gbextraleft +1;
+      j=abs(gbextraleft);
+      lhs=j;
+    }
+    else{
+      values = (double *)malloc(sizeof(double)*((ds->features)[index] - rhs+1));
+      Ls=(ds->features)[index] - rhs +1;
+      j=0;
+      lhs=j;
+    }
     if (!values) printMessage(0);
-    Ls= (ds->features)[index] - rhs +1;
-    j=0;
   }
   else{
     values = (double *)malloc(sizeof(double)*((ds->features)[index] - (posRelDist+rhs)+1));
     if (!values) printMessage(0);
     Ls= (ds->features)[index] - (posRelDist+rhs)+1;
     j=posRelDist;
+    lhs=j;
   }
   
   //printf("Seq:%d\tposreldist:%d\tnegreldist:%d\tmotifwidth: %d\tmode: %d\n",index,posRelDist,negRelDist,(m->mWidth)[mode],mode);
@@ -377,7 +404,7 @@ int sampleStartPosn(model *m, dataSet *ds,int mode, int index, unsigned int *see
   sum=0;
   L=(ds->features)[index];
   k=0;
-  while (j< L-rhs+1){
+  while (j<L-rhs+1){
     if (revFlag){
       if ((posRelDist>0) && (j > (L/2)-rhs) && (j<(L/2)+posRelDist)){
 	values[k]=0;
@@ -400,6 +427,10 @@ int sampleStartPosn(model *m, dataSet *ds,int mode, int index, unsigned int *see
       continue;
     }
     rval = scoreReads(m,ds,mode,j,posRelDist,negRelDist,index,posreadsback,negreadsback);
+    if (isinf(log(rval))){
+      printf("Reads window score <=0. score: %lf\n",rval);
+      exit(0);
+    }
     motval = scoreMotif(m,ds,mode,j,index,backgroundi);
     values[k]=motval*rval;
     //printf("%d\t%lf \t %lf \t %lf \n",j,values[k],motval,rval);
@@ -409,46 +440,13 @@ int sampleStartPosn(model *m, dataSet *ds,int mode, int index, unsigned int *see
   }
   if(isinf(log(sum))){
     printf("Sum is 0 for sampling motif start position for sequence: %d\n",index);
-    if (posRelDist<0) L=(ds->features)[index] - rhs +1;
-    else L=(ds->features)[index] - (posRelDist+rhs)+1;
-    for (j=0;j<L;j++){
-      printf("%lf\t",values[j]);
-    }
-    printf("\n");
-    L=(ds->features)[index];
-    if (posRelDist<0) j=0;
-    else j=posRelDist;
-    while (j< L-rhs+1){
-      if (revFlag && (j > (L/2)-rhs) && (j<(L/2)+posRelDist)){
-	values[k]=0;
-	j=j+1;
-	k=k+1;
-	continue;
-      }
-      if ((ds->lookahead)[index][j]< (m->mWidth)[mode]){
-	values[k]=0;
-	v=(ds->lookahead)[index][j];
-	j=j+v+1;
-	k=k+v+1;
-	continue;
-      }
-      rval = scoreReads(m,ds,mode,j,posRelDist,negRelDist,index,posreadsback,negreadsback);
-      motval = scoreMotif(m,ds,mode,j,index,backgroundi);
-      //values[k]=motval*rval;
-      values[k]= rval;
-      sum=sum+values[k];
-      j=j+1;
-      k=k+1;
-    }
     exit(0);
-    free(values);
-    return -1;
   }
   v=0;
   v = sample(values,Ls,((double)rand_r(seed))/(RAND_MAX)); 
-  if (posRelDist > 0)
-    v = v+posRelDist;
-
+  //if (posRelDist > 0)
+  //v = v+posRelDist;
+  v = v+lhs;
   if (v==-1){
     printMessage(1);
     exit(1);
@@ -457,17 +455,23 @@ int sampleStartPosn(model *m, dataSet *ds,int mode, int index, unsigned int *see
   return v;
 }
 
-int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *seed, int revFlag, double *background, double *posreadsback, double *negreadsback, int power){
+int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *seed, int revFlag, int gobeyond, double *background, double *posreadsback, double *negreadsback, int power){
   int i,v,motStart,L;
   double *values,sum=0,rval,motval;
   relDist *rd;
   int j;
+  int gbextraleft=0,gbextraright=0;
+
   values = (double*)malloc(sizeof(double)*(m->mode));
   if (!values) printMessage(0);
   rd = m->readMotifDist;
   motStart = startPos[index];
   L = (ds->features)[index];
   for(i=0;i< m->mode; i++){
+    if (gobeyond){
+      gbextraleft = rd[i].nreadsMotif-(m->nreadsWidth)[i];
+      gbextraright = ((m->preadsWidth)[i]-rd[i].preadsMotif-(m->mWidth)[i]-1);
+    }
     values[i]=((m->counts)[i]+m->alpha)/(m->n+ (m->alpha)*(m->mode));
     if (rd[i].preadsMotif >0){
       if(motStart - rd[i].preadsMotif < 0){
@@ -480,8 +484,20 @@ int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *s
 	values[i]=0;
 	continue;
       }
+      if (gbextraleft<0 && motStart+gbextraleft<0){
+	values[i]=0;
+	continue;
+      }
+      if (gbextraright>0 && motStart+(m->mWidth)[i]+gbextraright>L){
+	values[i]=0;
+	continue;
+      }
     }
     if((rd[i].nreadsMotif <= (m->mWidth)[i]) && (motStart+(m->mWidth)[i] > L)){
+      values[i] = 0;
+      continue;
+    }
+    if(gbextraleft<0 && (rd[i].nreadsMotif <= (m->mWidth)[i]) && (motStart+gbextraleft < 0)){
       values[i] = 0;
       continue;
     }
@@ -494,7 +510,15 @@ int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *s
 	values[i]=0;
 	continue;
       } 
+      if (gbextraright>0 && motStart<L/2 && (motStart+gbextraright)>L/2){
+	values[i]=0;
+	continue;
+      }
       if ((motStart > L/2) && (rd[i].preadsMotif > 0) && (motStart - (rd[i].preadsMotif) < (L/2))){
+	values[i]=0;
+	continue;
+      }
+      if (gbextraleft<0 && (motStart > L/2) && (motStart+gbextraleft<L/2)){
 	values[i]=0;
 	continue;
       }
@@ -509,6 +533,10 @@ int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *s
    }
    //score the window motStart-posRelDist to motStart+ negRelDist
    rval=scoreReads(m,ds,i,motStart,(rd[i].preadsMotif), (rd[i].nreadsMotif),index, posreadsback, negreadsback);
+   if(isinf(log(rval))){
+     printf("Score for read window <=0. score: %lf\n",rval);
+     exit(0);     
+   }
    motval = scoreMotif(m,ds,i,motStart,index,background);
 
    if(power == 0){
@@ -533,62 +561,10 @@ int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *s
   if (isinf(log(sum))){
     for (i=0;i<m->mode;i++) values[i]=0.0;
     printf("Sampling of labels have sum 0, seq no: %d with motstart: %d\n",index,motStart);
-    L = (ds->features)[index];
     for(i=0;i< m->mode; i++){
-      values[i]=((m->counts)[i]+m->alpha)/(m->n + (m->alpha)*(m->mode));
       printf("mode: %d\tposreldist: %d\tnegreldist: %d\tmotifwidth: %d\n",i,rd[i].preadsMotif,rd[i].nreadsMotif,(m->mWidth)[i]);
       printf("Values[%d]: %lf, #Seqs: %d, totalseqs: %d\n",i,values[i],(m->counts)[i],m->n);
-      if (rd[i].preadsMotif >0){
-	if(motStart - rd[i].preadsMotif < 0){
-	  values[i]=0;
-	  continue;
-	}
-      }
-      else{ //pos rel dist <= 0
-	if ((abs(rd[i].preadsMotif)+(m->preadsWidth)[i])>(m->mWidth)[i]){
-	  values[i]=0;
-	  continue;
-	}
-      }
-      if((rd[i].nreadsMotif <= (m->mWidth)[i]) && (motStart+(m->mWidth)[i] > L)){
-	values[i] = 0;
-	continue;
-      }
-      if((rd[i].nreadsMotif > (m->mWidth)[i]) && (motStart + (rd[i].nreadsMotif) > L)) {
-	values[i]=0;
-	continue;
-      }
-      else if(revFlag){
-	if ((motStart < L/2) && (motStart + (rd[i].nreadsMotif)>(L/2))){
-	  printf("Positive relative distance: %d Negative relative distance: %d\n",rd[i].preadsMotif,rd[i].nreadsMotif);
-	  printf("Halfway left side with reads right side\n");
-	  values[i]=0;
-	  continue;
-	} 
-	if ((motStart > L/2) && (motStart - (rd[i].preadsMotif) < (L/2))){
-	  printf("Halfway right side with reads going to left side\n");
-	  values[i]=0;
-	  continue;
-	}
-	if((rd[i].nreadsMotif <= (m->mWidth)[i]) && (motStart < L/2) && (motStart + (m->mWidth)[i] > L/2)){
-	  printf("Negareldist is smaller than motif, so motifwidth goes into the reverse strand");
-	  values[i]=0;
-	  continue;
-	}
-      }
-      if(motifWithN((ds->data)[index],motStart,(m->mWidth)[i])){
-	values[i]=0;
-	continue;
-      }
-      rval=scoreReads(m,ds,i,motStart,(rd[i].preadsMotif), (rd[i].nreadsMotif),index, posreadsback, negreadsback);
-      motval = scoreMotif(m,ds,i,motStart,index,background);
-      printf("%lf\t%.20lf\t%.20lf\n",values[i],rval,motval);
-      if (motval <= 0 || motval > 10000000000){
-	for (j=0;j<(m->mWidth)[i];j++){
-	  printf("(%lf %d)\t",background[motStart+j],(ds->data)[index][motStart+j]);
-	}
-	printf("\n");
-      }
+      
     }
     exit(1);
   }
@@ -646,7 +622,7 @@ int getMax(double *values,int *valid, int n){
   return maxindex;
 }
 
-int sampleMotifWidthRight(dataSet *ds, model *m, int *nreadsStart, int *labels, int *startPos, int mode, int maxWidth, int minWidth, double **posreadsback, double **negreadsback, double **background,int revFlag, unsigned int *seed,int hcflag){
+int sampleMotifWidthRight(dataSet *ds, model *m, int *nreadsStart, int *labels, int *startPos, int mode, int maxWidth, int minWidth, double **posreadsback, double **negreadsback, double **background,int revFlag, int gobeyond, unsigned int *seed,int hcflag){
   double *values;
   int ind,i,*valid;
   values = (double *)malloc(sizeof(double)*3);
@@ -658,9 +634,29 @@ int sampleMotifWidthRight(dataSet *ds, model *m, int *nreadsStart, int *labels, 
     valid[0]=0;
   }
   if ((m->readMotifDist)[mode].preadsMotif<0){
-    if (abs((m->readMotifDist)[mode].preadsMotif)+(m->preadsWidth)[mode] == (m->mWidth)[mode]){
+    if (!gobeyond && abs((m->readMotifDist)[mode].preadsMotif)+(m->preadsWidth)[mode] == (m->mWidth)[mode]){
       values[0]=0.0;
       valid[0]=0;
+    }
+    if (gobeyond && abs((m->readMotifDist)[mode].preadsMotif)==(m->mWidth)[mode]){
+      values[0]=0.0;
+      valid[0] = 0;
+    }
+  }
+  if ((m->preadsWidth)[mode] >= (m->mWidth)[mode]){
+    for (i=0;i<ds->n;i++){
+      if (gobeyond && startPos[i]+(m->mWidth)[mode]==(m->nreadsWidth)[mode]){
+	valid[0]=0;
+	break;
+      }
+      if(startPos[i]-(m->readMotifDist)[mode].preadsMotif==0){
+	valid[0]=0;
+	break;
+      }
+      if (revFlag && startPos[i]>(ds->features)[i]/2 && startPos[i]-(m->readMotifDist)[mode].preadsMotif==(ds->features)[i]/2){
+	valid[0]=0;
+	break;
+      }
     }
   }
   values[0] = 0.0;
@@ -670,10 +666,10 @@ int sampleMotifWidthRight(dataSet *ds, model *m, int *nreadsStart, int *labels, 
     values[2]=0.0;
     valid[2]=0;
   }
-  else if((m->readMotifDist)[mode].nreadsMotif <= (m->mWidth)[mode]+(m->nreadsWidth)[mode]){
+  else if(!gobeyond && (m->readMotifDist)[mode].nreadsMotif <= (m->mWidth)[mode]+(m->nreadsWidth)[mode]){
     values[2]=0.0;
     valid[2]=0;
-  }
+  }// motif cannot increase inside nrwindow 
   else values[2] = scoreIncreaseRight(ds,m,background,labels,startPos,mode,nreadsStart,negreadsback,revFlag);
   if (fabs(values[2])<0.000000000000001){
     valid[2]=0;
@@ -691,7 +687,7 @@ int sampleMotifWidthRight(dataSet *ds, model *m, int *nreadsStart, int *labels, 
   return ind;
 }
 
-int sampleMotifWidthLeft(dataSet *ds, model *m, int *preadsStart, int *labels, int *startPos, int mode, int maxWidth, int minWidth, double **posreadsback, double **negreadsback, double **background,int revFlag, unsigned int *seed, int hcflag){
+int sampleMotifWidthLeft(dataSet *ds, model *m, int *preadsStart, int *labels, int *startPos, int mode, int maxWidth, int minWidth, double **posreadsback, double **negreadsback, double **background,int revFlag, int gobeyond, unsigned int *seed, int hcflag){
   double *values;
   int ind,i,*valid;
   values = (double *)malloc(sizeof(double)*3);
@@ -701,6 +697,22 @@ int sampleMotifWidthLeft(dataSet *ds, model *m, int *preadsStart, int *labels, i
   if ((m->mWidth)[mode]-1 < minWidth) {
     values[0] = 0.0;
     valid[0] = 0;
+  }
+  if ((m->nreadsWidth)[mode] >= (m->mWidth)[mode]){
+    for (i=0;i<ds->n;i++){
+      if (startPos[i]+(m->readMotifDist)[mode].nreadsMotif+1 > (ds->features)[i]){
+	valid[0]=0;
+	break;
+      }
+      if (revFlag && startPos[i]<(ds->features)[i]/2 && (startPos[i]+(m->readMotifDist)[mode].nreadsMotif+1)>(ds->features)[i]/2){
+	valid[0]=0;
+	break;
+      }
+      if(gobeyond && startPos[i]+(m->readMotifDist)[mode].preadsMotif == (ds->features)[i]){
+	valid[0]=0;
+	break;
+      }
+    }
   }
   values[0] = 0.0;
   values[1] = scoreNochangeLeft(ds,m,background,labels,startPos,mode,preadsStart,posreadsback);
@@ -728,12 +740,12 @@ int sampleMotifWidthLeft(dataSet *ds, model *m, int *preadsStart, int *labels, i
   return ind;
 }
 
-double updateBestModel(model *m, dataSet *ds, int *labels, int *startPos, int *posreadsStart,int *negreadsStart, double **posreadsback, double **negreadsback, double **background, double maxLikelihood, int revFlag, int maxWidth, int minWidth, FILE *fp, int iterNo){
+double updateBestModel(model *m, dataSet *ds, int *labels, int *startPos, int *posreadsStart,int *negreadsStart, double **posreadsback, double **negreadsback, double **background, double maxLikelihood, int revFlag, int gobeyond, int maxWidth, int minWidth, FILE *fp, int iterNo){
   int i;
   //int j;
   double tmpLikelihood = 0.0;
   for (i=0;i<(ds->n);i++){
-    tmpLikelihood = getBestParams(m,ds,i,background,posreadsback,negreadsback,revFlag,startPos,labels,posreadsStart,negreadsStart,maxLikelihood);
+    tmpLikelihood = getBestParams(m,ds,i,background,posreadsback,negreadsback,revFlag,gobeyond,startPos,labels,posreadsStart,negreadsStart,maxLikelihood);
     if (maxLikelihood < tmpLikelihood){
       maxLikelihood = tmpLikelihood;
       if (fp!= NULL) fprintf(fp,"%lf\n",tmpLikelihood);
@@ -747,7 +759,7 @@ double updateBestModel(model *m, dataSet *ds, int *labels, int *startPos, int *p
   /* if(iterNo%10 == 0){ */
   /*   tmpLikelihood = 0; */
   /*   for(i=0;i<(m->mode);i++){ */
-  /*     tmpLikelihood += getBestMotifWidth(m,ds,i,background,posreadsback,negreadsback,revFlag,maxWidth,minWidth,startPos,labels,posreadsStart,negreadsStart); */
+  /*     tmpLikelihood += getBestMotifWidth(m,ds,i,background,posreadsback,negreadsback,revFlag,gobeyond,maxWidth,minWidth,startPos,labels,posreadsStart,negreadsStart); */
   /*   } */
   /*   if(maxLikelihood < tmpLikelihood){ */
   /*     maxLikelihood = tmpLikelihood; */
@@ -833,7 +845,7 @@ void printModelParams(model *m, int revflag, char *bestmodelfile){
 }
 
 
-trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned int seed, double **background, double **posreadsback, double **negreadsback, int *mWidth, int rWidth,int minWidth, int maxWidth, int posOffset, int negOffset, int revFlag,char *filename,char *bestmodelfile){
+trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned int seed, double **background, double **posreadsback, double **negreadsback, int *mWidth, int rWidth,int minWidth, int maxWidth, int posOffset, int negOffset, int revFlag, int gobeyond, char *filename,char *bestmodelfile){
   trainOut *to=NULL;
   int i,j,k,iterations,oldLabel,oldStart,flag=0,maxoffset,power,countIter;
   int *labels, *startPos, *posreadsStart, *negreadsStart,*preadsStart,*nreadsStart;
@@ -882,18 +894,26 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
   }
   for(i=0;i<mode;i++) {
     if (posOffset > 0)
-      preadspart[i]= posOffset+prWidth[i];
-    else
+      preadspart[i] = posOffset+prWidth[i];
+    else if (!gobeyond && posOffset<=(mWidth[i]-prWidth[i]))
       preadspart[i]= posOffset;
+    else if (gobeyond && posOffset<=mWidth[i])
+      preadspart[i]= posOffset;
+    else if (abs(posOffset) > mWidth[i]){
+      posOffset= 0;
+      preadspart[i] = posOffset+prWidth[i];
+    }
     if (negOffset < 0){
-      if(abs(negOffset)>mWidth[i])
+      if (gobeyond && abs(negOffset)>=(mWidth[i]+nrWidth[i]))
+	negOffset = 0;
+      else if(!gobeyond && abs(negOffset)>mWidth[i])
 	negOffset = 0;
     }
     nreadspart[i]= negOffset+nrWidth[i];
   }
   maxoffset = 10;
   countIter = 0;
-  initializeLabelStartPos(ds,labels,startPos,mode,mWidth,preadspart,nreadspart,revFlag,&seed);
+  initializeLabelStartPos(ds,labels,startPos,mode,mWidth,prWidth,nrWidth,preadspart,nreadspart,revFlag,gobeyond,&seed);
 
   initializeReadWinStartPos(posreadsStart,negreadsStart,startPos,labels,ds->n,mWidth, prWidth,nrWidth,preadspart,nreadspart);
 
@@ -933,7 +953,7 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
     oldStart = spc[i];
     addRemoveDataPoint(m,ds,lpc,spc,preadsStart,nreadsStart,i,-1); 
     if (lpc[i]>=0) {
-      spc[i] = sampleStartPosn(m,ds,lpc[i],i,&seed,revFlag,(m->readMotifDist)[lpc[i]].preadsMotif,(m->readMotifDist)[lpc[i]].nreadsMotif,background[i],posreadsback[i],negreadsback[i]);
+      spc[i] = sampleStartPosn(m,ds,lpc[i],i,&seed,revFlag,gobeyond,(m->readMotifDist)[lpc[i]].preadsMotif,(m->readMotifDist)[lpc[i]].nreadsMotif,background[i],posreadsback[i],negreadsback[i]);
       if (spc[i]<0){
 	printf("sampling start pos makes it negative. start:%d label:%d\n",spc[i],lpc[i]);
 	exit(0);
@@ -942,7 +962,7 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
     else spc[i]=-1;    
 
     if(spc[i]>=0) {
-      lpc[i] = sampleLabel(m, ds, spc, i, &seed, revFlag, background[i],posreadsback[i],negreadsback[i],power);
+      lpc[i] = sampleLabel(m, ds, spc, i, &seed, revFlag,gobeyond,background[i],posreadsback[i],negreadsback[i],power);
     }
     else lpc[i]=-1;
     if (spc[i]>=0) {
@@ -950,7 +970,7 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
       addRemoveDataPoint(m,ds,lpc,spc,preadsStart,nreadsStart,i,1);
     }
     if (oldLabel == lpc[i] && oldStart == spc[i]){
-      fprintf(fp,"%lf\n",tmpLikelihood);
+      if (fp!=NULL) fprintf(fp,"%lf\n",tmpLikelihood);
       continue;
     }
     modeWiseLikelihood[oldLabel] = calculateLikelihoodMode(m,ds,lpc,spc,preadsStart,nreadsStart,posreadsback,negreadsback, background,oldLabel,pcReads);
@@ -983,9 +1003,9 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
       for (k=0; k < m->mode; k++){
     	if ((m->counts)[k] == 0) continue;
     	//printf("Width sampling. Mode: %d\n",k);
-    	mw1 = sampleMotifWidthRight(ds,m,nreadsStart,lpc,spc,k,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,&seed,0);
+    	mw1 = sampleMotifWidthRight(ds,m,nreadsStart,lpc,spc,k,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,gobeyond,&seed,0);
     	//printf("Mode: %d right mw1: %d motif width: %d\n",k,mw1,(m->mWidth)[k]);
-    	mw2 = sampleMotifWidthLeft(ds,m,preadsStart,lpc,spc,k,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,&seed,0);
+    	mw2 = sampleMotifWidthLeft(ds,m,preadsStart,lpc,spc,k,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,gobeyond,&seed,0);
     	//printf("Mode: %d left mw2: %d motif width: %d\n",k,mw2,(m->mWidth)[k]);
     	if (mw1 !=1 || mw2!= 1) countIter = 0;
     	if (mw1 == 0){
@@ -1008,14 +1028,14 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
       if ((m->counts)[k] == 0) continue;
       if(prWidth[k] > 0){
 	//printf("Mode : %d ************ Sample positive offset (Current: %d)\n",k,preadspart[k]);
-	pr = samplePositiveOffset(m,ds,k,lpc,spc,preadsStart,prWidth[k],preadspart[k],maxoffset,posreadsback,&seed,revFlag);
+	pr = samplePositiveOffset(m,ds,k,lpc,spc,preadsStart,prWidth[k],preadspart[k],maxoffset,posreadsback,&seed,revFlag,gobeyond);
 	preadspart[k] = pr;
 	(m->readMotifDist)[k].preadsMotif = preadspart[k];
 	//printf("New positive offset: %d for mode: %d\n",preadspart[k],k);
       }
       if (nrWidth[k] > 0){
 	//printf("Sample negative offse: (Current: %d)t\n",nreadspart[k]);
-	nr = sampleNegativeOffset(m,ds,k,lpc,spc,nreadsStart,nrWidth[k],nreadspart[k],maxoffset,negreadsback,&seed,revFlag);
+	nr = sampleNegativeOffset(m,ds,k,lpc,spc,nreadsStart,nrWidth[k],nreadspart[k],maxoffset,negreadsback,&seed,revFlag,gobeyond);
 	nreadspart[k] = nr + nrWidth[k];
 	(m->readMotifDist)[k].nreadsMotif = nreadspart[k]+(m->mWidth)[k];
 	//printf("New negative offset: %d for mode: %d\n",nreadspart[k],k);
@@ -1024,6 +1044,7 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
       // Recompute all the read params
       getReadParams(m, ds, spc, lpc, preadsStart, nreadsStart);
     }
+    
     tmpLikelihood = calculateLikelihood(m,ds,lpc,spc,preadsStart,nreadsStart,posreadsback,negreadsback,background,pcReads);
     power = power/2;
     if (fp!=NULL) fprintf(fp,"%lf\n",tmpLikelihood);
@@ -1058,7 +1079,7 @@ trainOut* trainData(dataSet *ds,int mode, float alpha, float *pcReads, unsigned 
   j = 0;
   flag = 1;
   while((flag == 1) && (j < 100)){
-    tmpLikelihood = updateBestModel(m,ds,labels,startPos,posreadsStart,negreadsStart,posreadsback,negreadsback,background,maxLikelihood,revFlag,maxWidth,minWidth,fp,j);
+    tmpLikelihood = updateBestModel(m,ds,labels,startPos,posreadsStart,negreadsStart,posreadsback,negreadsback,background,maxLikelihood,revFlag,gobeyond,maxWidth,minWidth,fp,j);
     if (tmpLikelihood > maxLikelihood) {
       maxLikelihood = tmpLikelihood;
       flag = 1;

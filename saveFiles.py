@@ -7,6 +7,9 @@ import weblogoMod.weblogolib as wl
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from loadModel import loadmodel
+import scoring as sc
+
 def createLogo(sequences, filename):
     seqs = wl.read_seq_data(sequences)
     data = wl.LogoData.from_seqs(seqs)
@@ -61,7 +64,7 @@ def createFiles(seqarr,posn,seqmodes,motifWidths,preadsStart,nreadsStart,preadsW
         motif = getSeq(motif)            
         rd = reldist[seqmodes[i]]
       
-        if revFlag and posn[i] > (len(seqarr[i])/2):
+        if revFlag and posn[i] >= (len(seqarr[i])/2):
             L = len(seqarr[i])
             motpos = L - posn[i]-motifWidths[seqmodes[i]]
 
@@ -199,13 +202,14 @@ def makeplots(posreads,negreads,preadsWidth,nreadsWidth,preadsStart,nreadsStart,
 
 def saveDetails(sequences,posreads,negreads,outdir,twobit,revflag,trainout):
     likefile = outdir + '/likelihood.txt'
-    imagefile = outdir + '/likelihood.png'
-    if not(os.path.isfile(imagefile)):
-        if (not(os.path.isfile(likefile))):
-            pass
-        else:
-            os.system('Rscript plotLikelihood.r '+likefile+' '+imagefile)
-            os.system('rm '+ likefile)
+    if os.path.isfile(likefile):
+        imagefile = outdir + '/likelihood.png'
+        if not(os.path.isfile(imagefile)):
+            if (not(os.path.isfile(likefile))):
+                pass
+            else:
+                os.system('Rscript plotLikelihood.r '+likefile+' '+imagefile)
+                os.system('rm '+ likefile)
 
     n = len(sequences)
     relDist = dict()
@@ -253,3 +257,23 @@ def createHTML(outdir,minMode,maxMode,twobit,fasta,bestmodel):
         gh.makehtml(outdir,m,hmflag,)
     gh.makelinksHTML(outdir,minMode,maxMode)
     gh.makeBestmodelHTML(outdir,bm,bestmodel,hmflag)
+
+def seqsInProbSpace(alldata,modelfile,scoreOutfile,revFlag,maskReps,headerfile,outdir):
+    hf = open(headerfile,'r')
+    allheaders = []
+    c = 0
+    for h in hf:
+        allheaders.append(h.strip()[1:])
+        c+=1
+    hf.close()
+    model = loadmodel(modelfile)
+    scoresFromModel = sc.scoreSequences(alldata,model,revFlag)
+    nof = open(scoreOutfile,'w')
+    for i in range(len(allheaders)):
+        sumX = sum(scoresFromModel[i])
+        finalscores = [x/sumX for x in scoresFromModel[i]]
+        nof.write('\t'.join([allheaders[i]]+map(str,finalscores))+'\n')
+    nof.close()
+    infofile = outdir+'/info.txt'
+    heatmap = outdir+'/seqsInProbSpace.png'
+    os.system("Rscript plotSeqsProbHeatmap.r "+infofile+" "+scoreOutfile+" "+heatmap)

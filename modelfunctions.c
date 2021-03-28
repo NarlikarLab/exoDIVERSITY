@@ -15,8 +15,24 @@ int motifWithN(int *seq, int start, int width){
   return 0;
 }
 
-void initializeLabelStartPos(dataSet *ds, int* labels, int* startPos, int mode, int* mWidth, int *preadspart, int *nreadspart, int revFlag, unsigned int *seed){
+void initializeLabelStartPos(dataSet *ds, int* labels, int* startPos, int mode, int* mWidth, int *prWidth, int *nrWidth, int *preadspart, int *nreadspart, int revFlag, int gobeyond, unsigned int *seed){
   int i,count,ul,choice;
+  int *gbextraleft,*gbextraright;
+  gbextraleft = (int *)malloc(sizeof(int)*mode);
+  gbextraright = (int *)malloc(sizeof(int)*mode);
+  if (gobeyond){
+    for (i=0;i<mode;i++){
+      gbextraleft[i] = mWidth[i]+nreadspart[i]-nrWidth[i];
+      gbextraright[i] = (prWidth[i]-preadspart[i]-mWidth[i]-1);
+    }
+  }
+  else{
+    for (i=0;i<mode;i++){
+      gbextraleft[i] = 0;
+      gbextraright[i] = 0;
+    }
+
+  }
   for (i=0;i<ds->n;i++){
     labels[i]=rand_r(seed)%mode;
     if((preadspart[labels[i]]>0) && (nreadspart[labels[i]]>0)){
@@ -41,6 +57,16 @@ void initializeLabelStartPos(dataSet *ds, int* labels, int* startPos, int mode, 
       }
     }
     else if(preadspart[labels[i]]<=0 && nreadspart[labels[i]]<=0){
+      if(gobeyond && gbextraright[labels[i]]>0 && (ds->features)[i]-mWidth[labels[i]]-gbextraright[labels[i]]<=0){
+	startPos[i]=-1;
+	labels[i]=-1;
+	continue;
+      }
+      if (gobeyond && gbextraleft[labels[i]]<0 && (ds->features)[i]-mWidth[labels[i]]+abs(gbextraleft[labels[i]])<=0){
+	startPos[i]=-1;
+	labels[i]=-1;
+	continue;
+      }
       if((ds->features)[i] - (mWidth)[labels[i]] + 1 <=0){
 	startPos[i]=-1;
 	labels[i]=-1;
@@ -65,16 +91,32 @@ void initializeLabelStartPos(dataSet *ds, int* labels, int* startPos, int mode, 
 	  }
 	}
 	else {
-	  if (nreadspart[labels[i]] > 0)
+	  if (nreadspart[labels[i]] > 0){
+	    if(gobeyond && nreadspart[labels[i]]<gbextraright[labels[i]]){
+	      ul = ((ds->features)[i])/2 - gbextraright[labels[i]] - mWidth[labels[i]]+1;
+	    }
+	    else{
 	    ul = ((ds->features)[i])/2 - nreadspart[labels[i]] - mWidth[labels[i]]+1;
-	  else
-	    ul = ((ds->features)[i])/2 - mWidth[labels[i]]+1;
+	    }
+	  }
+	  else{
+	    if(gobeyond){
+	      ul = ((ds->features)[i])/2-mWidth[labels[i]]+1;
+	      if (gbextraright[labels[i]]>0)
+		ul=ul-gbextraright[labels[i]];
+	      if (gbextraleft[labels[i]]<0)
+		ul=ul-abs(gbextraleft[labels[i]]);
+	    }
+	    else
+	      ul = ((ds->features)[i])/2 - mWidth[labels[i]]+1;
+	  }
 	  if (choice){ //1: forward strand
 	    startPos[i]=(rand_r(seed)%ul);
 	  }
 	  else{ //0: reverse strand
 	    startPos[i]=(rand_r(seed)%ul)+((ds->features)[i]/2);
 	  }
+	  if (gbextraleft[labels[i]]<0) startPos[i]+=abs(gbextraleft[labels[i]]);
 	}
       }
       else{
@@ -86,18 +128,34 @@ void initializeLabelStartPos(dataSet *ds, int* labels, int* startPos, int mode, 
 	  startPos[i]=(rand_r(seed)%ul)+preadspart[labels[i]];
 	}
 	else{
-	  if (nreadspart[labels[i]]>0)
-	    ul = (ds->features)[i]-nreadspart[labels[i]]-mWidth[labels[i]]+1;
-	  else
-	    ul = (ds->features)[i]-mWidth[labels[i]]+1;
+	  if (nreadspart[labels[i]]>0){
+	    if(gobeyond && nreadspart[labels[i]]<gbextraright[labels[i]]){
+	      ul = (ds->features)[i] - gbextraright[labels[i]] - mWidth[labels[i]]+1;
+	    }
+	    else{
+	      ul = (ds->features)[i]-nreadspart[labels[i]]-mWidth[labels[i]]+1;
+	    }
+	  }
+	  else{
+	    if (gobeyond){
+	      ul = (ds->features)[i]-mWidth[labels[i]]+1;
+	      if (gbextraright[labels[i]]>0)
+		ul = ul-gbextraright[labels[i]];
+	      if (gbextraleft[labels[i]]<0)
+		ul = ul-abs(gbextraleft[labels[i]]);
+	    }
+	    else
+	      ul = (ds->features)[i]-mWidth[labels[i]]+1;
+	  }
 	  startPos[i]=(rand_r(seed)%ul);
+	  if (gbextraleft[labels[i]] < 0) startPos[i]+=abs(gbextraleft[labels[i]]);
+	  }
 	}
-      }
       if (motifWithN((ds->data)[i],startPos[i],mWidth[labels[i]]))
 	count++;
       else
 	break;
-    } //while end
+      } //while end
     if (count==30) {
       //printf("count became 30\n");
       startPos[i]=-1;

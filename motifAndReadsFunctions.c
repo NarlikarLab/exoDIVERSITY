@@ -509,11 +509,6 @@ double scoreIncreaseLeft(dataSet *ds, model *m, double **background,int *labels,
       free(values);
       return 0;
     }
-    if (revFlag && (startPos[i] == ((ds->features)[i]/2))){
-        //printf("Left shift is dangerous! Pos: %d\t readstar=half seqlength:  %d \n",startPos[i],readsStart[i]==(ds->features)[i]/2);
-      free(values);
-      return 0;
-    }
     if (revFlag && (startPos[i] == (ds->features)[i]/2)){
       free(values);
       return 0;
@@ -621,9 +616,9 @@ void fillReadsPWM(model *m, dataSet *ds, int mode,int *startPos, int *labels, in
 }
 
 
-int samplePositiveOffset(model *m, dataSet *ds, int mode, int *labels, int *startPos, int *preadsStart, int prWidth, int preadspart, int maxoffset, double **posreadsback,unsigned int *seed, int rev){
+int samplePositiveOffset(model *m, dataSet *ds, int mode, int *labels, int *startPos, int *preadsStart, int prWidth, int preadspart, int maxoffset, double **posreadsback,unsigned int *seed, int rev,int gobeyond){
   //preadsStart can change at the end
-  int maxleftwidth, maxallowed;
+  int maxleftwidth,maxrightwidth,maxallowed;
   int i,j,k,flag=0,ind,posnBeforeMotif,start;
   readsContainer *tr;
   readParams *tv;
@@ -631,6 +626,7 @@ int samplePositiveOffset(model *m, dataSet *ds, int mode, int *labels, int *star
   double *poslikes,maxlike=0;
   double rp,rpt,s,totpc,sum=0;
   //printf("From pos offset\n");
+  maxrightwidth = 0;
   maxleftwidth = maxoffset + prWidth;
   //if(2*prWidth < (m->mWidth)[mode]) start=2*prWidth-(m->mWidth)[mode];
   if (prWidth > (m->mWidth)[mode]) start = prWidth - (m->mWidth)[mode];
@@ -655,24 +651,48 @@ int samplePositiveOffset(model *m, dataSet *ds, int mode, int *labels, int *star
     }
     if (flag) break;
   }
+  if (prWidth > (m->mWidth)[mode] && i==start) return (i-1);
   if(i >0) maxallowed = i-1;
   else maxallowed = 0;
-  //printf("Mode: %d Maxallowed: %d and motifwidth: %d\n",mode,maxallowed,(m->mWidth)[mode]);
+  
   if (maxallowed < 0){
     printf("Positive maxallowed: %d\n",maxallowed);
     exit(0);
   }
+
+  if (gobeyond){
+    flag = 0;
+    for (i=0;i<(m->mWidth)[mode];i++){
+      for (j = 0;j<ds->n;j++){
+	if(labels[j]!=mode) continue;
+	if(startPos[j]<0) continue;
+	if (startPos[j]+i+prWidth>(ds->features)[j]){
+	  flag=1;
+	  break;
+	}
+	if(rev && startPos[j]<(ds->features)[j]/2 && startPos[j]+i+prWidth>(ds->features)[j]/2){
+	  flag=1;
+	  break;
+	}
+      }
+      if (flag) break;
+    }
+    maxrightwidth = i-1;
+  }
+  else{
+    maxrightwidth = (m->mWidth)[mode]-prWidth;
+  }
+  //poslikes = (double*)malloc(sizeof(double)*(maxallowed+((m->mWidth)[mode]-prWidth)+1));
+  //valid = (int*)malloc(sizeof(int)*(maxallowed+((m->mWidth)[mode]-prWidth)+1));
+  poslikes = (double*)malloc(sizeof(double)*(maxallowed+maxrightwidth+1));
+  valid = (int*)malloc(sizeof(int)*(maxallowed+maxrightwidth+1));
   tpreadsStart = (int*)malloc(sizeof(int)*(ds->n));
-  //poslikes = (double*)malloc(sizeof(double)*(maxallowed-prWidth+1));
-  //valid = (int*)malloc(sizeof(int)*(maxallowed-prWidth+1));
-  poslikes = (double*)malloc(sizeof(double)*(maxallowed+((m->mWidth)[mode]-prWidth)+1));
-  valid = (int*)malloc(sizeof(int)*(maxallowed+((m->mWidth)[mode]-prWidth)+1));
   totpc = (m->pcReads)[0]+(m->pcReads)[1];
   tr = (readsContainer*)malloc(sizeof(readsContainer)); 
   tr->readsWin = initializeReadParamsPerMode(prWidth);
-  maxlike = -1.0* INT_MAX;
+  maxlike = -1.0*INT_MAX;
 
-  for(i=maxallowed;i>=-((m->mWidth)[mode] - prWidth);i--){
+  for(i=maxallowed;i>=-maxrightwidth;i--){
     /* adjust read start positions as we slide*/
     for (j=0;j<ds->n;j++){
       if (labels[j]!=mode) continue;
@@ -724,7 +744,7 @@ int samplePositiveOffset(model *m, dataSet *ds, int mode, int *labels, int *star
     valid[maxallowed-i] = 1;
   }
   sum = 0;
-  for (i=0;i<maxallowed+(m->mWidth)[mode]-prWidth+1;i++){
+  for (i=0;i<maxallowed+maxrightwidth+1;i++){
     if(fabs(maxlike-poslikes[i])<700) valid[i]=1;
     else{
       valid[i]=0;
@@ -734,16 +754,17 @@ int samplePositiveOffset(model *m, dataSet *ds, int mode, int *labels, int *star
   }
   if(isinf(log(sum))){
     printf("Sum of the elements for sampling positive offset is 0\n");
-    for (i=0;i<maxallowed+(m->mWidth)[mode]-prWidth+1;i++){
+    printf("Mode: %d Maxallowed: %d and motifwidth: %d\n",mode,maxallowed,(m->mWidth)[mode]);
+    for (i=0;i<maxallowed+maxrightwidth+1;i++){
       printf("poslikes[%d]: %lf valid: %d\n",i,poslikes[i],valid[i]);
     }
     exit(0);
   }
-  takeExp(poslikes,valid,maxallowed+(m->mWidth)[mode]-prWidth+1);
+  takeExp(poslikes,valid,maxallowed+maxrightwidth+1);
   //for (i=0;i<(maxallowed+(m->mWidth)[mode]-prWidth+1);i++)
   //  printf("%.12lf\n",poslikes[i]);
 
-  ind = sample(poslikes,maxallowed+(m->mWidth)[mode]-prWidth+1,(double)(rand_r(seed))/(RAND_MAX)); // ind: reads should start at maxallowed-ind number of positions before motifstart
+  ind = sample(poslikes,maxallowed+maxrightwidth+1,(double)(rand_r(seed))/(RAND_MAX)); // ind: reads should start at maxallowed-ind number of positions before motifstart
   posnBeforeMotif = maxallowed-ind;
   //printf("posnBeforeMotif: %d\tmaxallowed: %d\tind: %d\n",posnBeforeMotif,maxallowed,ind);
   for (i=0;i<ds->n;i++){
@@ -772,9 +793,9 @@ int samplePositiveOffset(model *m, dataSet *ds, int mode, int *labels, int *star
   return posnBeforeMotif;
 }
 
-int sampleNegativeOffset(model *m, dataSet *ds, int mode, int *labels, int *startPos, int *nreadsStart, int nrWidth, int nreadspart, int maxoffset, double **negreadsback, unsigned int *seed, int rev){
+int sampleNegativeOffset(model *m, dataSet *ds, int mode, int *labels, int *startPos, int *nreadsStart, int nrWidth, int nreadspart, int maxoffset, double **negreadsback, unsigned int *seed, int rev,int gobeyond){
   //negreadsStart can change at the end
-  int maxrightwidth, maxallowed;
+  int maxrightwidth, maxallowed, maxleftwidth=0,left=0;
   int i,j,k,flag=0,ind,posnAfterMotif;
   readsContainer *tr;
   readParams *tv;
@@ -789,11 +810,13 @@ int sampleNegativeOffset(model *m, dataSet *ds, int mode, int *labels, int *star
       if (labels[j]!=mode) continue;
       if (startPos[j]<0) continue;
       if(startPos[j]+(m->mWidth)[mode]+nrWidth + i > (ds->features)[j]){
+	//printf("Neg offset, starpos: %d i:%d mwidth: %d\n",startPos[i],i,(m->mWidth)[mode]);
 	flag=1;
 	break;
       }
       if(rev){
 	if((startPos[j] < (ds->features)[j]/2) && ((startPos[j]+(m->mWidth)[mode]+nrWidth+i) > (ds->features)[j]/2)){
+	  //printf("Neg offset, starpos: %d i:%d mwidth: %d\n",startPos[i],i,(m->mWidth)[mode]);
 	  flag=1 ;
 	  break;
 	}
@@ -803,15 +826,38 @@ int sampleNegativeOffset(model *m, dataSet *ds, int mode, int *labels, int *star
   }
   maxallowed = i;
   //printf("Mode: %d Maxallowed: %d and motifwidth: %d\n",mode,maxallowed,(m->mWidth)[mode]);
+  if (gobeyond){
+    flag = 0;
+    for (i=1;i<nrWidth;i++){
+      for (j=0;j<(ds->n);j++){
+	if (labels[j]!=mode) continue;
+	if (startPos[j]<0) continue;
+	if (startPos[j]-i<0){
+	  flag = 1;
+	  break;
+	}
+	if (rev && startPos[j] > (ds->features)[j]/2 && startPos[j]-i<(ds->features)[j]/2){
+	  flag = 1;
+	  break;
+	}
+      }
+      if (flag) break;
+    }
+    left = i-1;
+  }
+  maxleftwidth = left + (m->mWidth)[mode];
+  //printf("left obtained: %d\n",left);
+
   tnreadsStart = (int *)malloc(sizeof(int)*(ds->n));
-  neglikes = (double*)malloc(sizeof(double)*((m->mWidth)[mode]+maxallowed));
-  valid = (int*)malloc(sizeof(int)*((m->mWidth)[mode]+maxallowed));
+  neglikes = (double*)malloc(sizeof(double)*(maxleftwidth+maxallowed));
+  valid = (int*)malloc(sizeof(int)*(maxleftwidth+maxallowed));
   totpc = (m->pcReads)[0]+(m->pcReads)[1];
   tr = (readsContainer*)malloc(sizeof(readsContainer));
   tr->readsWin = initializeReadParamsPerMode(nrWidth);
   
   maxlike = -1.0*INT_MAX;
-  for (i=0;i<((m->mWidth)[mode]+maxallowed);i++){
+
+  for (i=-left;i<((m->mWidth)[mode]+maxallowed);i++){
     /*Adjust read positions as we slide*/
     for(j=0;j<ds->n;j++){
       if(labels[j]!=mode) continue;
@@ -861,13 +907,13 @@ int sampleNegativeOffset(model *m, dataSet *ds, int mode, int *labels, int *star
       tv = tv->next;
     }
     s = s-rn;
-    neglikes[i] = s;
-    //printf("Posn: %d neglikes: %lf\n",i,neglikes[i]);
-    if (neglikes[i]>maxlike) maxlike = neglikes[i];
-    valid[i] = 1;
+    neglikes[i+left] = s;
+    //printf("Posn: %d neglikes: %lf\n",i,neglikes[i+left]);
+    if (neglikes[i+left]>maxlike) maxlike = neglikes[i+left];
+    valid[i+left] = 1;
   }
   sum=0;
-  for(i=0;i<((m->mWidth)[mode]+maxallowed);i++){
+  for(i=0;i<(maxleftwidth+maxallowed);i++){
     if (fabs(maxlike-neglikes[i])<700) valid[i] = 1;
     else{
       valid[i]=0;
@@ -877,15 +923,16 @@ int sampleNegativeOffset(model *m, dataSet *ds, int mode, int *labels, int *star
     //printf("%lf %d\n",neglikes[i],valid[i]);
   }
   if (isinf(log(sum))) {
-    printf("Sum of the elements for sampling negative offset is 0");
+    printf("Sum of the elements for sampling negative offset is 0\n");
+    printf("maxallowed: %d and motif width: %d\n",maxallowed,(m->mWidth)[mode]);
     exit(0);
   }
-  takeExp(neglikes,valid,maxallowed+(m->mWidth)[mode]);
+  takeExp(neglikes,valid,maxallowed+maxleftwidth);
   //for (i=0;i<maxallowed;i++)
   //printf("%lf %d\n",neglikes[i],valid[i]);
 
-  ind = sample(neglikes,(m->mWidth)[mode]+maxallowed,(double)(rand_r(seed))/(RAND_MAX));
-  posnAfterMotif = ind-(m->mWidth)[mode];
+  ind = sample(neglikes,maxleftwidth+maxallowed,(double)(rand_r(seed))/(RAND_MAX));
+  posnAfterMotif = ind-maxleftwidth;
     
   //printf("For negative offset. Maxallowed: %d, posnAfterMotif: %d\n",maxallowed,posnAfterMotif);
 

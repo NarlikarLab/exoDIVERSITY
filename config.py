@@ -1,5 +1,7 @@
 defaultRevFlag = 1
 defaultMaskFlag = 0
+defaultPostFlag = 0
+defaultReadwinBorderFlag = 0
 defaultInitialWidth = 12
 defaultReadWidth = 5
 defaultMode = 1

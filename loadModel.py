@@ -84,5 +84,19 @@ def loadmodel(modelfile):
     pcReads = map(float,mf.readline().strip().split('\t'))
     mf.close()
 
-    model = [noOfmodes,features,totseqs,allpwms,allpospwms,allnegpwms,modeSeqCounts,motifWidths,posreadsWidths,negreadsWidths,reldist,alpha,pcReads]
-    return model
+    #model = [noOfmodes,features,totseqs,allpwms,allpospwms,allnegpwms,modeSeqCounts,motifWidths,posreadsWidths,negreadsWidths,reldist,alpha,pcReads]
+    m = {}
+    m['noOfmodes'] = noOfmodes
+    m['features'] = features
+    m['totseqs'] = totseqs
+    m['allpwms'] = allpwms
+    m['allpospwms'] = allpospwms
+    m['allnegpwms'] = allnegpwms
+    m['modeSeqCounts'] = modeSeqCounts
+    m['motifWidths'] = motifWidths
+    m['posreadsWidths'] = posreadsWidths
+    m['negreadsWidths'] = negreadsWidths
+    m['reldist'] = reldist
+    m['alpha'] = alpha
+    m['pcReads'] = pcReads
+    return m

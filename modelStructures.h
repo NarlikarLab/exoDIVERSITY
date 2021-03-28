@@ -43,7 +43,7 @@ typedef struct modelstruct{
   float *pcReads;
 }model;
 
-void initializeLabelStartPos(dataSet*, int*, int*, int, int*, int*, int*, int, unsigned int*);
+void initializeLabelStartPos(dataSet*, int*, int*, int, int*, int*, int*, int*, int*, int, int,unsigned int*);
 void initializeReadWinStartPos(int*, int*, int*, int*, int, int*, int*, int*, int*, int*);
 model* createModel(int, dataSet*, int*, int*, int*, int*, float, float*, int*,int*, int*, int*, int*);
 int motifWithN(int*, int, int);

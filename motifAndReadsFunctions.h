@@ -41,6 +41,6 @@ readParams *getLastReadNode(readParams*);
 void fillReadsPWM(model*, dataSet*, int, int*, int*, int*, readParams*, int, int);
 
 
-int samplePositiveOffset(model*, dataSet*, int, int*, int*, int*, int, int, int, double**, unsigned int*, int);
-int sampleNegativeOffset(model*, dataSet*, int, int*, int*, int*, int, int, int, double**, unsigned int*, int);
+int samplePositiveOffset(model*, dataSet*, int, int*, int*, int*, int, int, int, double**, unsigned int*, int,int);
+int sampleNegativeOffset(model*, dataSet*, int, int*, int*, int*, int, int, int, double**, unsigned int*, int,int);
 #endif

@@ -10,16 +10,18 @@
 #include "traindata.h"
 
 
-double getBestParams(model *tmpmodel, dataSet *ds, int index, double **background, double **posreadsback, double **negreadsback, int revFlag, int *startPos, int *labels, int *posreadsStart, int *negreadsStart, double prevLikelihood){
+double getBestParams(model *tmpmodel, dataSet *ds, int index, double **background, double **posreadsback, double **negreadsback, int revFlag, int gobeyond, int *startPos, int *labels, int *posreadsStart, int *negreadsStart, double prevLikelihood){
   double currscore,rval,motval,maxscore,like;
 
   int j,L,v,i,maxlabel,maxindex,preldist,nreldist,oldlabel,oldstart,oldprStart,oldnrStart,flag=0;
   int rhs;
+  int gbextraleft=0, gbextraright=0;
   maxscore = -1;
   maxlabel = -1;
   maxindex = -1;
   oldlabel = labels[index];
   oldstart = startPos[index];
+  
   //printf("Index: %d\n",index);
   //Score each window and check if the score exceed the currscore for all modes
   //printf("Seq: %d Mode: %d motifstart: %d\tposreadstart: %d negreadstart: %d\n",index,labels[index],startPos[index],posreadsStart[index],negreadsStart[index]);
@@ -27,15 +29,37 @@ double getBestParams(model *tmpmodel, dataSet *ds, int index, double **backgroun
   for(i=0;i<(tmpmodel->mode);i++){
     preldist = (tmpmodel->readMotifDist)[i].preadsMotif;
     nreldist = (tmpmodel->readMotifDist)[i].nreadsMotif;
-    if (nreldist < (tmpmodel->mWidth)[i]) 
-      rhs = (tmpmodel->mWidth)[i];
-    else
-      rhs = nreldist;
+    if (gobeyond){
+      gbextraleft = nreldist-(tmpmodel->nreadsWidth)[i];
+      gbextraright = ((tmpmodel->preadsWidth)[i]-preldist-(tmpmodel->mWidth)[i]-1);
+    }
+    if (gbextraright > 0 && gbextraright+(tmpmodel->mWidth)[i]>nreldist){
+      rhs = (tmpmodel->mWidth)[i]+gbextraright;
+    }
+    else{
+      if (nreldist < (tmpmodel->mWidth)[i]) 
+	rhs = (tmpmodel->mWidth)[i];
+      else
+	rhs = nreldist;
+    }
     // If posreldist > motifwidth do not check in this mode
-    if ((preldist<0) && (abs(preldist) + (tmpmodel->preadsWidth)[i])>(tmpmodel->mWidth)[i])
-      continue;
-    if (preldist<=0) j=0;
+    if (!gobeyond){
+      if ((preldist<0) && (abs(preldist) + (tmpmodel->preadsWidth)[i])>(tmpmodel->mWidth)[i])
+	continue;
+    }
+    else if (gobeyond){ //positive read window is beyond the right edge of motif
+      if ((preldist<0) && (abs(preldist)>(tmpmodel->mWidth)[i]))
+	continue;
+      // if nreldist == nreadswidth :neg read window is at the left edge of motif 
+    }
+    if (preldist<=0){
+      if (gbextraleft<0)
+	j = abs(gbextraleft);
+      else
+	j=0;
+    }
     else j = preldist;
+
     while(j<(L-rhs+1)){
       if (revFlag){
 	if ((preldist>0) && (j>(L/2)-rhs) && (j<(L/2)+preldist)){
@@ -53,6 +77,10 @@ double getBestParams(model *tmpmodel, dataSet *ds, int index, double **backgroun
 	continue;
       }
       rval = scoreReads(tmpmodel,ds,i,j,preldist,nreldist,index,posreadsback[index],negreadsback[index]);
+      if (isinf(log(rval))){
+	printf("Reads window score <=0 i hill climbing. score: %lf\n",rval);
+      exit(0);
+      }
       motval = scoreMotif(tmpmodel,ds,i,j,index,background[index]);
       currscore = rval*motval;
       if (currscore > maxscore){
@@ -147,14 +175,14 @@ double getBestParams(model *tmpmodel, dataSet *ds, int index, double **backgroun
   return prevLikelihood;
 }
 
-double getBestMotifWidth(model *m, dataSet *ds, int mode, double **background, double **posreadsback, double **negreadsback, int revFlag, int maxWidth, int minWidth, int *startPos, int *labels, int *posreadsStart, int *negreadsStart){
+double getBestMotifWidth(model *m, dataSet *ds, int mode, double **background, double **posreadsback, double **negreadsback, int revFlag, int gobeyond,int maxWidth, int minWidth, int *startPos, int *labels, int *posreadsStart, int *negreadsStart){
   // first best width on right and then on left
   int indL, indR;
   unsigned int dummyseed=0;
   double like,newlike;
   like = calculateLikelihoodMode(m,ds,labels,startPos,posreadsStart,negreadsStart,posreadsback,negreadsback,background,mode,(m->pcReads));
   //printf("For mode %d  ********** Like: %lf\n",mode,like);
-  indR = sampleMotifWidthRight(ds,m,negreadsStart,labels,startPos,mode,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,&dummyseed,1);
+  indR = sampleMotifWidthRight(ds,m,negreadsStart,labels,startPos,mode,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,gobeyond,&dummyseed,1);
 
   
   //printf("motwidth: %d\tposreldist: %d\tnegreldist: %d\n",(m->mWidth)[mode],(m->readMotifDist)[mode].preadsMotif,(m->readMotifDist)[mode].nreadsMotif);
@@ -178,7 +206,7 @@ double getBestMotifWidth(model *m, dataSet *ds, int mode, double **background, d
   //printf("motwidth: %d\tposreldist: %d\tnegreldist: %d\n",(m->mWidth)[mode],(m->readMotifDist)[mode].preadsMotif,(m->readMotifDist)[mode].nreadsMotif);
   
   //printf("After right width sampling Like: %lf\n",like);
-  indL = sampleMotifWidthLeft(ds,m,posreadsStart,labels,startPos,mode,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,&dummyseed,1);
+  indL = sampleMotifWidthLeft(ds,m,posreadsStart,labels,startPos,mode,maxWidth,minWidth,posreadsback,negreadsback,background,revFlag,gobeyond,&dummyseed,1);
   
   //printf("motwidth: %d\tposreldist: %d\tnegreldist: %d\n",(m->mWidth)[mode],(m->readMotifDist)[mode].preadsMotif,(m->readMotifDist)[mode].nreadsMotif);
   //printf("IndL: %d\n",indL);
