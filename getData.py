@@ -321,7 +321,7 @@ def storeSettings(paramVals):
     if paramVals['-ctrl']!='':
         of.write('Control reads file: '+paramVals['-ctrl']+'\n')
     if paramVals['-format']!='':
-        of.write('Format of reads file: '+paramVals['-format']+'\n')
+        of.write('Format of reads file: '+paramVals['-format'])
     if paramVals['-twobit']!='':
         of.write('twobit file: '+paramVals['-twobit'])
     of.write('Positive reads file: '+paramVals['-p']+'\n')
@@ -332,6 +332,7 @@ def storeSettings(paramVals):
     of.write('Maximum number of modes: '+str(paramVals['-maxMode'])+'\n')
     of.write('Reverse strand: '+str(paramVals['-rev'])+'\n')
     of.write('Mask repeats: '+str(paramVals['-mask'])+'\n')
+    of.write('Extend read window beyond motif: '+str(paramVals['-gobeyond'])+'\n')
     of.write('Initial width: '+str(paramVals['-initialWidth'])+'\n')
     of.write('Number of trials per model: '+str(paramVals['-ntrials'])+'\n')
     of.write('Binarize read counts based on: '+paramVals['-bin']+'\n')

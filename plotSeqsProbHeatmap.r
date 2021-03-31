@@ -1,6 +1,5 @@
 library("RColorBrewer")
 library("plotfunctions")
-suppressMessages(library("gplots"))
 args=commandArgs(trailingOnly=TRUE)
 infofile = args[1]
 inpfile = args[2]

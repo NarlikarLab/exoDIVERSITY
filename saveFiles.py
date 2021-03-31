@@ -132,16 +132,29 @@ def makeplots(posreads,negreads,preadsWidth,nreadsWidth,preadsStart,nreadsStart,
     posreadsPerMode = dict()
     negreadsPerMode = dict()
     totlength = dict()
+    plotMotStart={}
+
     for i in range(n):
         if labels[i]<0 or startPos[i]<0: continue
+        s = 0
         if relDist[labels[i]][0]<0:
-            start = startPos[i]
+            if (nreadsStart[i] - startPos[i]) < nreadsWidth[labels[i]]:
+                start = nreadsStart[i] - nreadsWidth[labels[i]]
+                s = startPos[i] - (nreadsStart[i] - nreadsWidth[labels[i]])
+            else:
+                start = startPos[i]
+                s = 0
             d = 0
         else:
             start = preadsStart[i]
+            s = startPos[i]-preadsStart[i]
             d = relDist[labels[i]][0]
+
         if relDist[labels[i]][1] < motifWidths[labels[i]]:
-            end = start + d + motifWidths[labels[i]]
+            if startPos[i]+motifWidths[labels[i]] - preadsStart[i] < preadsWidth[labels[i]]:
+                end = preadsStart[i] + preadsWidth[labels[i]]
+            else:
+                end = start + d + motifWidths[labels[i]]
         else:
             end = start + d + relDist[labels[i]][1]
             
@@ -149,6 +162,8 @@ def makeplots(posreads,negreads,preadsWidth,nreadsWidth,preadsStart,nreadsStart,
             posreadsPerMode[labels[i]]=[posreads[i][start:end]]
             negreadsPerMode[labels[i]]=[negreads[i][start:end]]
             totlength[labels[i]] = end-start
+            plotMotStart[labels[i]] = s
+            
         else:
             posreadsPerMode[labels[i]].append(posreads[i][start:end])
             if (len(posreads[i][start:end])!=totlength[labels[i]]):
@@ -177,7 +192,11 @@ def makeplots(posreads,negreads,preadsWidth,nreadsWidth,preadsStart,nreadsStart,
         g = ax.set_ylim(0,ymax)
         g = ax.set_xlim(0,totlength[m])
         
-        if relDist[m][0]> 0:
+        g = ax.axvline(x=plotMotStart[m],color='m',linestyle='--') # motstart
+        g = ax.axvline(x=plotMotStart[m]+int(motifWidths[m]),color='m',linestyle='--') #motend
+
+        '''
+        if relDist[m][0]>0:
             g = ax.axvline(x=relDist[m][0],color='m',linestyle='--') # motstart
             g = ax.axvline(x=relDist[m][0]+int(motifWidths[m]),color='m',linestyle='--') #motend
             #g = ax.axvline(x = 0,color='k',linestyle='--') #posreldist first
@@ -187,13 +206,6 @@ def makeplots(posreads,negreads,preadsWidth,nreadsWidth,preadsStart,nreadsStart,
             g = ax.axvline(x=int(motifWidths[m]),color='m',linestyle='--') #motend
             #g = ax.axvline(x = abs(relDist[m][0]),color='k',linestyle='--') #posreldist first
             #g = ax.axvline(x = abs(relDist[m][0])+preadsWidth[m],color='k',linestyle='--') #posreldist last
-        '''
-        if relDist[m][1] < motifWidths[m]:
-            g = ax.axvline(x = totlength[m]+(relDist[m][1]-motifWidths[m]) ,color='k',linestyle='--') #negreads last
-            g = ax.axvline(x = totlength[m]+(relDist[m][1]-motifWidths[m])-nreadsWidth[m],color='k',linestyle='--') #negreads first
-        else:
-            g = ax.axvline(x = totlength[m],color='k',linestyle='--') #negreads last
-            g = ax.axvline(x = totlength[m]-nreadsWidth[m],color='k',linestyle='--') #negreads first
         '''
         g = ax.legend(('Forward Strand','Reverse Strand'),loc = 'best')
         fig.savefig(readsPlot)

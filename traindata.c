@@ -480,7 +480,7 @@ int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *s
       }
     }
     else{ //pos rel dist <= 0
-      if ((abs(rd[i].preadsMotif)+(m->preadsWidth)[i])>(m->mWidth)[i]){
+      if (!gobeyond && (abs(rd[i].preadsMotif)+(m->preadsWidth)[i])>(m->mWidth)[i]){	
 	values[i]=0;
 	continue;
       }
