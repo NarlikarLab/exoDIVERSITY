@@ -365,7 +365,7 @@ int sampleStartPosn(model *m, dataSet *ds,int mode, int index, unsigned int *see
   int gbextraleft=0,gbextraright=0;
   if (gobeyond){
     gbextraleft = negRelDist-(m->nreadsWidth)[mode];
-    gbextraright = ((m->preadsWidth)[mode]-posRelDist-(m->mWidth)[mode]-1);
+    gbextraright = ((m->preadsWidth)[mode]-posRelDist-(m->mWidth)[mode]);
   }
   if (gbextraright>0 && gbextraright+(m->mWidth)[mode]>negRelDist){
     rhs = (m->mWidth)[mode]+gbextraright;
@@ -470,7 +470,7 @@ int sampleLabel(model *m, dataSet *ds, int *startPos, int index, unsigned int *s
   for(i=0;i< m->mode; i++){
     if (gobeyond){
       gbextraleft = rd[i].nreadsMotif-(m->nreadsWidth)[i];
-      gbextraright = ((m->preadsWidth)[i]-rd[i].preadsMotif-(m->mWidth)[i]-1);
+      gbextraright = ((m->preadsWidth)[i]-rd[i].preadsMotif-(m->mWidth)[i]);
     }
     values[i]=((m->counts)[i]+m->alpha)/(m->n+ (m->alpha)*(m->mode));
     if (rd[i].preadsMotif >0){
